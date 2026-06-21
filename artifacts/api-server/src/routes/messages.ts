@@ -3,6 +3,7 @@ import { eq, or, desc } from "drizzle-orm";
 import { db, conversationsTable, messagesTable, usersTable } from "@workspace/db";
 import { CreateConversationBody, SendMessageBody } from "@workspace/api-zod";
 import { getSessionUser } from "./auth";
+import { notifyUser } from "../lib/notifyUser";
 
 const router: IRouter = Router();
 
@@ -70,7 +71,6 @@ router.post("/conversations", async (req, res): Promise<void> => {
 
   const { participantId } = parsed.data;
 
-  // Check if conversation already exists
   const existing = await db
     .select()
     .from(conversationsTable)
@@ -148,20 +148,42 @@ router.post("/conversations/:id/messages", async (req, res): Promise<void> => {
   if (!user) { res.status(401).json({ error: "Session expirée" }); return; }
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const id = parseInt(raw, 10);
+  const convId = parseInt(raw, 10);
 
   const parsed = SendMessageBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const [msg] = await db
     .insert(messagesTable)
-    .values({ conversationId: id, senderId: user.id, content: parsed.data.content })
+    .values({ conversationId: convId, senderId: user.id, content: parsed.data.content })
     .returning();
 
   await db
     .update(conversationsTable)
     .set({ lastMessage: parsed.data.content, lastMessageAt: new Date() })
-    .where(eq(conversationsTable.id, id));
+    .where(eq(conversationsTable.id, convId));
+
+  // Notifier le destinataire (l'autre participant de la conversation)
+  const [conv] = await db
+    .select()
+    .from(conversationsTable)
+    .where(eq(conversationsTable.id, convId));
+
+  if (conv) {
+    const recipientId =
+      conv.participant1Id === user.id ? conv.participant2Id : conv.participant1Id;
+    const preview =
+      parsed.data.content.length > 60
+        ? parsed.data.content.slice(0, 60) + "…"
+        : parsed.data.content;
+    await notifyUser(
+      recipientId,
+      "new_message",
+      `Nouveau message de ${user.name}`,
+      preview,
+      convId,
+    );
+  }
 
   const [sender] = await db.select().from(usersTable).where(eq(usersTable.id, user.id));
 

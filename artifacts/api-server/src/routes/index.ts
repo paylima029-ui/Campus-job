@@ -8,6 +8,7 @@ import applicationsRouter from "./applications";
 import messagesRouter from "./messages";
 import reviewsRouter from "./reviews";
 import dashboardRouter from "./dashboard";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(applicationsRouter);
 router.use(messagesRouter);
 router.use(reviewsRouter);
 router.use(dashboardRouter);
+router.use(notificationsRouter);
 
 export default router;

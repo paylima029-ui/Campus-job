@@ -99,9 +99,14 @@ router.post("/missions", async (req, res): Promise<void> => {
   const parsed = CreateMissionBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
+  const deadlineStr =
+    parsed.data.deadline instanceof Date
+      ? parsed.data.deadline.toISOString().slice(0, 10)
+      : (parsed.data.deadline as unknown as string);
+
   const [mission] = await db
     .insert(missionsTable)
-    .values({ ...parsed.data, clientId: user.id, budget: parsed.data.budget.toString() })
+    .values({ ...parsed.data, clientId: user.id, budget: parsed.data.budget.toString(), deadline: deadlineStr })
     .returning();
 
   res.status(201).json(await enrichMission(mission));
