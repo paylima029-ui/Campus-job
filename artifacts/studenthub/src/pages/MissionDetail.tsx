@@ -4,6 +4,7 @@ import {
   useListApplications,
   useCreateApplication,
   useUpdateApplication,
+  useUpdateMission,
   useCreateConversation,
   getListApplicationsQueryKey,
   getGetMissionQueryKey,
@@ -31,6 +32,8 @@ import {
   XCircle,
   Clock,
   MessageSquare,
+  PlayCircle,
+  Ban,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -61,15 +64,39 @@ export default function MissionDetail() {
   const [proposedBudget, setProposedBudget] = useState("");
   const [showForm, setShowForm] = useState(false);
 
-  const { data: mission, isLoading } = useGetMission(id, { query: { enabled: !!id } });
-  const { data: applications } = useListApplications(id, { query: { enabled: !!id && isAuthenticated } });
+  const { data: mission, isLoading } = useGetMission(id, { query: { enabled: !!id } as any });
+  const { data: applications } = useListApplications(id, { query: { enabled: !!id && isAuthenticated } as any });
   const createApplication = useCreateApplication();
   const updateApplication = useUpdateApplication();
   const createConversation = useCreateConversation();
 
+  const updateMission = useUpdateMission();
+
   const myApplication = applications?.find((a) => a.studentId === user?.id);
   const isOwner = mission?.clientId === user?.id;
   const isStudent = user?.role === UserRole.student;
+
+  const handleMissionStatusUpdate = (newStatus: "in_progress" | "completed" | "cancelled") => {
+    if (!id) return;
+    updateMission.mutate(
+      { id, data: { status: newStatus } },
+      {
+        onSuccess: () => {
+          const labels: Record<string, string> = {
+            in_progress: "Mission marquée en cours",
+            completed: "Mission terminée",
+            cancelled: "Mission annulée",
+          };
+          toast({ title: labels[newStatus] ?? "Mission mise à jour" });
+          queryClient.invalidateQueries({ queryKey: getGetMissionQueryKey(id) });
+          queryClient.invalidateQueries({ queryKey: getListApplicationsQueryKey(id) });
+        },
+        onError: () => {
+          toast({ title: "Erreur", description: "Impossible de mettre à jour la mission.", variant: "destructive" });
+        },
+      }
+    );
+  };
 
   const handleApply = () => {
     if (!id) return;
@@ -258,6 +285,61 @@ export default function MissionDetail() {
                     </div>
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Mission management (visible to owner) */}
+          {isOwner && mission.status !== "cancelled" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Gestion de la mission</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Statut actuel : <strong>{statusMap[mission.status]?.label ?? mission.status}</strong>
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {mission.status === "open" && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleMissionStatusUpdate("in_progress")}
+                      disabled={updateMission.isPending}
+                    >
+                      <PlayCircle className="h-3.5 w-3.5 mr-1.5" />
+                      Marquer en cours
+                    </Button>
+                  )}
+                  {(mission.status === "open" || mission.status === "in_progress") && (
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => handleMissionStatusUpdate("completed")}
+                        disabled={updateMission.isPending}
+                      >
+                        <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+                        Terminer la mission
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleMissionStatusUpdate("cancelled")}
+                        disabled={updateMission.isPending}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Ban className="h-3.5 w-3.5 mr-1.5" />
+                        Annuler
+                      </Button>
+                    </>
+                  )}
+                  {mission.status === "completed" && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Mission terminée avec succès
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}

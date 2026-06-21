@@ -27,7 +27,7 @@ export default function ServiceDetail() {
   const createConversation = useCreateConversation();
 
   const { data: service, isLoading } = useGetService(id, {
-    query: { enabled: !!id },
+    query: { enabled: !!id } as any,
   });
 
   const handleContact = () => {

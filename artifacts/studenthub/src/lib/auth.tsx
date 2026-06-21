@@ -14,9 +14,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const { data: user, isLoading, refetch } = useGetMe({
-    query: {
-      retry: false,
-    },
+    query: { retry: false } as any,
   });
 
   const refetchMe = async () => {

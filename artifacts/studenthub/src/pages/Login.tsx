@@ -45,8 +45,8 @@ export default function Login() {
         },
         onError: () => {
           toast({
-            title: "Erreur de connexion",
-            description: "Email ou mot de passe incorrect.",
+            title: "Identifiants incorrects",
+            description: "Vérifiez votre email et mot de passe.",
             variant: "destructive",
           });
         },
@@ -55,12 +55,12 @@ export default function Login() {
   };
 
   return (
-    <div className="container flex h-[calc(100dvh-4rem)] w-full flex-col items-center justify-center">
-      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[380px]">
+    <div className="container flex min-h-[calc(100dvh-4rem)] w-full flex-col items-center justify-center px-4 py-12">
+      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[400px]">
         <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">Bienvenue</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Connexion</h1>
           <p className="text-sm text-muted-foreground">
-            Connectez-vous à votre compte MY CAMPUS JOB
+            Accédez à votre espace MY CAMPUS JOB
           </p>
         </div>
 
@@ -71,7 +71,7 @@ export default function Login() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Adresse email</FormLabel>
                   <FormControl>
                     <Input type="email" placeholder="nom@exemple.com" autoComplete="email" {...field} />
                   </FormControl>
@@ -98,17 +98,12 @@ export default function Login() {
           </form>
         </Form>
 
-        <div className="space-y-2 text-center text-sm text-muted-foreground">
-          <p>
-            Pas encore de compte ?{" "}
-            <Link href="/register" className="font-medium underline underline-offset-4 hover:text-primary">
-              S'inscrire gratuitement
-            </Link>
-          </p>
-          <p className="text-xs">
-            Compte test : <span className="font-mono">aminata.diallo@etud.ucad.sn</span> / <span className="font-mono">password</span>
-          </p>
-        </div>
+        <p className="text-center text-sm text-muted-foreground">
+          Pas encore de compte ?{" "}
+          <Link href="/register" className="font-medium underline underline-offset-4 hover:text-primary">
+            Créer un compte gratuitement
+          </Link>
+        </p>
       </div>
     </div>
   );

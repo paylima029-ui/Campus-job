@@ -47,9 +47,9 @@ export default function Profile() {
   const id = parseInt(params.id, 10);
   const { user: currentUser } = useAuth();
 
-  const { data: profile, isLoading: profileLoading } = useGetUser(id, { query: { enabled: !!id } });
-  const { data: servicesData } = useListServices({ params: { query: {} } });
-  const { data: reviews } = useListUserReviews(id, { query: { enabled: !!id } });
+  const { data: profile, isLoading: profileLoading } = useGetUser(id, { query: { enabled: !!id } as any });
+  const { data: servicesData } = useListServices();
+  const { data: reviews } = useListUserReviews(id, { query: { enabled: !!id } as any });
 
   const isOwnProfile = currentUser?.id === id;
   const userServices = servicesData?.services?.filter((s) => s.studentId === id) ?? [];
@@ -113,8 +113,8 @@ export default function Profile() {
                   )}
                 </div>
 
-                {profile.averageRating && profile.totalReviews > 0 && (
-                  <StarRating rating={profile.averageRating} count={profile.totalReviews} />
+                {profile.averageRating && (profile.totalReviews ?? 0) > 0 && (
+                  <StarRating rating={profile.averageRating} count={profile.totalReviews ?? 0} />
                 )}
 
                 {isStudent && (

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, applicationsTable, usersTable, missionsTable } from "@workspace/db";
 import { CreateApplicationBody, UpdateApplicationBody } from "@workspace/api-zod";
 import { getSessionUser } from "./auth";
@@ -32,7 +32,7 @@ async function enrichApplication(app: typeof applicationsTable.$inferSelect) {
 router.get("/missions/:missionId/applications", async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.missionId) ? req.params.missionId[0] : req.params.missionId;
   const missionId = parseInt(raw, 10);
-  if (isNaN(missionId)) { res.status(400).json({ error: "Invalid missionId" }); return; }
+  if (isNaN(missionId)) { res.status(400).json({ error: "Identifiant de mission invalide" }); return; }
 
   const apps = await db.select().from(applicationsTable).where(eq(applicationsTable.missionId, missionId));
   const enriched = await Promise.all(apps.map(enrichApplication));
@@ -47,6 +47,22 @@ router.post("/missions/:missionId/applications", async (req, res): Promise<void>
 
   const raw = Array.isArray(req.params.missionId) ? req.params.missionId[0] : req.params.missionId;
   const missionId = parseInt(raw, 10);
+  if (isNaN(missionId)) { res.status(400).json({ error: "Identifiant de mission invalide" }); return; }
+
+  // Vérifier que la mission existe et est ouverte
+  const [mission] = await db.select().from(missionsTable).where(eq(missionsTable.id, missionId));
+  if (!mission) { res.status(404).json({ error: "Mission introuvable" }); return; }
+  if (mission.status !== "open") { res.status(400).json({ error: "Cette mission n'accepte plus de candidatures" }); return; }
+  if (mission.clientId === user.id) { res.status(400).json({ error: "Vous ne pouvez pas postuler à votre propre mission" }); return; }
+
+  // Vérifier qu'il n'y a pas déjà une candidature de cet étudiant
+  const [existing] = await db
+    .select()
+    .from(applicationsTable)
+    .where(
+      sql`${applicationsTable.missionId} = ${missionId} AND ${applicationsTable.studentId} = ${user.id}`
+    );
+  if (existing) { res.status(409).json({ error: "Vous avez déjà postulé à cette mission" }); return; }
 
   const parsed = CreateApplicationBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
@@ -61,10 +77,10 @@ router.post("/missions/:missionId/applications", async (req, res): Promise<void>
     })
     .returning();
 
-  // Increment applicationCount
+  // Incrémenter le compteur de candidatures
   await db
     .update(missionsTable)
-    .set({ applicationCount: eq(missionsTable.id, missionId) ? undefined : undefined })
+    .set({ applicationCount: sql`${missionsTable.applicationCount} + 1` })
     .where(eq(missionsTable.id, missionId));
 
   res.status(201).json(await enrichApplication(app));
@@ -78,12 +94,20 @@ router.patch("/applications/:id", async (req, res): Promise<void> => {
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Identifiant invalide" }); return; }
+
+  const [app] = await db.select().from(applicationsTable).where(eq(applicationsTable.id, id));
+  if (!app) { res.status(404).json({ error: "Candidature introuvable" }); return; }
+
+  // Seul le propriétaire de la mission peut accepter/refuser
+  const [mission] = await db.select().from(missionsTable).where(eq(missionsTable.id, app.missionId));
+  if (!mission || mission.clientId !== user.id) {
+    res.status(403).json({ error: "Accès interdit : vous n'êtes pas le propriétaire de cette mission" });
+    return;
+  }
 
   const parsed = UpdateApplicationBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
-
-  const [app] = await db.select().from(applicationsTable).where(eq(applicationsTable.id, id));
-  if (!app) { res.status(404).json({ error: "Candidature non trouvée" }); return; }
 
   const [updated] = await db
     .update(applicationsTable)

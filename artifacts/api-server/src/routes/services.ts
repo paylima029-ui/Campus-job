@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, ilike, gte, lte, sql, and } from "drizzle-orm";
+import { eq, sql, desc, and } from "drizzle-orm";
 import { db, servicesTable, usersTable } from "@workspace/db";
 import { CreateServiceBody, UpdateServiceBody } from "@workspace/api-zod";
 import { getSessionUser } from "./auth";
@@ -33,15 +33,35 @@ async function enrichService(service: typeof servicesTable.$inferSelect) {
 router.get("/services", async (req, res): Promise<void> => {
   const { category, search, minPrice, maxPrice, limit = "20", offset = "0" } = req.query as Record<string, string>;
 
-  let services = await db.select().from(servicesTable);
+  const conditions = [];
 
-  if (category) services = services.filter(s => s.category === category);
-  if (search) services = services.filter(s => s.title.toLowerCase().includes(search.toLowerCase()) || s.description.toLowerCase().includes(search.toLowerCase()));
-  if (minPrice) services = services.filter(s => parseFloat(s.price as unknown as string) >= parseFloat(minPrice));
-  if (maxPrice) services = services.filter(s => parseFloat(s.price as unknown as string) <= parseFloat(maxPrice));
+  if (category) {
+    conditions.push(eq(servicesTable.category, category));
+  }
+  if (search) {
+    conditions.push(
+      sql`(${servicesTable.title} ilike ${`%${search}%`} OR ${servicesTable.description} ilike ${`%${search}%`})`
+    );
+  }
+  if (minPrice && !isNaN(parseFloat(minPrice))) {
+    conditions.push(sql`${servicesTable.price} >= ${parseFloat(minPrice)}`);
+  }
+  if (maxPrice && !isNaN(parseFloat(maxPrice))) {
+    conditions.push(sql`${servicesTable.price} <= ${parseFloat(maxPrice)}`);
+  }
 
-  const total = services.length;
-  const page = services.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const allServices = await db
+    .select()
+    .from(servicesTable)
+    .where(whereClause)
+    .orderBy(desc(servicesTable.createdAt));
+
+  const total = allServices.length;
+  const lim = Math.min(parseInt(limit, 10) || 20, 100);
+  const off = parseInt(offset, 10) || 0;
+  const page = allServices.slice(off, off + lim);
   const enriched = await Promise.all(page.map(enrichService));
   res.json({ services: enriched, total });
 });
@@ -59,10 +79,10 @@ router.get("/services/popular", async (_req, res): Promise<void> => {
 router.get("/services/:id", async (req, res): Promise<void> => {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  if (isNaN(id)) { res.status(400).json({ error: "Identifiant invalide" }); return; }
 
   const [service] = await db.select().from(servicesTable).where(eq(servicesTable.id, id));
-  if (!service) { res.status(404).json({ error: "Service non trouvé" }); return; }
+  if (!service) { res.status(404).json({ error: "Service introuvable" }); return; }
 
   res.json(await enrichService(service));
 });
@@ -92,10 +112,11 @@ router.patch("/services/:id", async (req, res): Promise<void> => {
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Identifiant invalide" }); return; }
 
   const [existing] = await db.select().from(servicesTable).where(eq(servicesTable.id, id));
-  if (!existing) { res.status(404).json({ error: "Service non trouvé" }); return; }
-  if (existing.studentId !== user.id) { res.status(403).json({ error: "Interdit" }); return; }
+  if (!existing) { res.status(404).json({ error: "Service introuvable" }); return; }
+  if (existing.studentId !== user.id) { res.status(403).json({ error: "Accès interdit" }); return; }
 
   const parsed = UpdateServiceBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
@@ -115,10 +136,11 @@ router.delete("/services/:id", async (req, res): Promise<void> => {
 
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(raw, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Identifiant invalide" }); return; }
 
   const [existing] = await db.select().from(servicesTable).where(eq(servicesTable.id, id));
-  if (!existing) { res.status(404).json({ error: "Service non trouvé" }); return; }
-  if (existing.studentId !== user.id) { res.status(403).json({ error: "Interdit" }); return; }
+  if (!existing) { res.status(404).json({ error: "Service introuvable" }); return; }
+  if (existing.studentId !== user.id) { res.status(403).json({ error: "Accès interdit" }); return; }
 
   await db.delete(servicesTable).where(eq(servicesTable.id, id));
   res.sendStatus(204);

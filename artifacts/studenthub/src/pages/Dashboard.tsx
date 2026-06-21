@@ -47,9 +47,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function StudentDashboardView({ userId }: { userId: number }) {
   const { data: stats, isLoading: statsLoading } = useGetStudentDashboard();
-  const { data: servicesData, isLoading: servicesLoading } = useListServices({
-    params: { query: {} },
-  });
+  const { data: servicesData, isLoading: servicesLoading } = useListServices();
 
   const myServices = servicesData?.services?.filter((s) => s.studentId === userId) ?? [];
 
@@ -173,9 +171,7 @@ function StudentDashboardView({ userId }: { userId: number }) {
 
 function ClientDashboardView({ userId }: { userId: number }) {
   const { data: stats, isLoading: statsLoading } = useGetClientDashboard();
-  const { data: missionsData, isLoading: missionsLoading } = useListMissions({
-    params: { query: {} },
-  });
+  const { data: missionsData, isLoading: missionsLoading } = useListMissions();
 
   const myMissions = missionsData?.missions?.filter((m) => m.clientId === userId) ?? [];
 
@@ -305,10 +301,10 @@ export default function Dashboard() {
         <p className="text-muted-foreground mt-1">Bienvenue, {user?.name}.</p>
       </div>
 
-      {user?.role === UserRole.student
+      {user && (user.role === UserRole.student
         ? <StudentDashboardView userId={user.id} />
         : <ClientDashboardView userId={user.id} />
-      }
+      )}
     </div>
   );
 }
