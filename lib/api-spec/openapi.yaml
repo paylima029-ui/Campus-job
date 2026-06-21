@@ -3,20 +3,36 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: StudentHub Africa API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User profiles
+  - name: services
+    description: Student services marketplace
+  - name: missions
+    description: Job missions
+  - name: applications
+    description: Mission applications
+  - name: messages
+    description: Messaging
+  - name: reviews
+    description: Reviews and ratings
+  - name: dashboard
+    description: Dashboard summaries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +40,674 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: OK
+
+  # USERS
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List users (students for marketplace)
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [student, company, individual]
+        - name: skill
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserList"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/featured:
+    get:
+      operationId: getFeaturedStudents
+      tags: [users]
+      summary: Get featured/top-rated students
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserProfile"
+
+  # SERVICES
+  /services:
+    get:
+      operationId: listServices
+      tags: [services]
+      summary: List services
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: minPrice
+          in: query
+          schema:
+            type: number
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceList"
+
+    post:
+      operationId: createService
+      tags: [services]
+      summary: Create a service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+
+  /services/popular:
+    get:
+      operationId: getPopularServices
+      tags: [services]
+      summary: Get popular services by category
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Service"
+
+  /services/{id}:
+    get:
+      operationId: getService
+      tags: [services]
+      summary: Get a service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateService
+      tags: [services]
+      summary: Update a service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+
+    delete:
+      operationId: deleteService
+      tags: [services]
+      summary: Delete a service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # MISSIONS
+  /missions:
+    get:
+      operationId: listMissions
+      tags: [missions]
+      summary: List missions
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, in_progress, completed, cancelled]
+        - name: skill
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: minBudget
+          in: query
+          schema:
+            type: number
+        - name: maxBudget
+          in: query
+          schema:
+            type: number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MissionList"
+
+    post:
+      operationId: createMission
+      tags: [missions]
+      summary: Create a mission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MissionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mission"
+
+  /missions/recent:
+    get:
+      operationId: getRecentMissions
+      tags: [missions]
+      summary: Get recently posted missions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Mission"
+
+  /missions/{id}:
+    get:
+      operationId: getMission
+      tags: [missions]
+      summary: Get a mission
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mission"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateMission
+      tags: [missions]
+      summary: Update a mission
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MissionUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mission"
+
+    delete:
+      operationId: deleteMission
+      tags: [missions]
+      summary: Delete a mission
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # APPLICATIONS
+  /missions/{missionId}/applications:
+    get:
+      operationId: listApplications
+      tags: [applications]
+      summary: List applications for a mission
+      parameters:
+        - name: missionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Application"
+
+    post:
+      operationId: createApplication
+      tags: [applications]
+      summary: Apply to a mission
+      parameters:
+        - name: missionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+
+  /applications/{id}:
+    patch:
+      operationId: updateApplication
+      tags: [applications]
+      summary: Accept or reject an application
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+
+  # MESSAGES
+  /conversations:
+    get:
+      operationId: listConversations
+      tags: [messages]
+      summary: List conversations for current user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+
+    post:
+      operationId: createConversation
+      tags: [messages]
+      summary: Start a conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConversationInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /conversations/{id}/messages:
+    get:
+      operationId: listMessages
+      tags: [messages]
+      summary: List messages in a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      summary: Send a message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  # REVIEWS
+  /reviews:
+    post:
+      operationId: createReview
+      tags: [reviews]
+      summary: Submit a review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+
+  /reviews/user/{userId}:
+    get:
+      operationId: listUserReviews
+      tags: [reviews]
+      summary: List reviews for a user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Review"
+
+  # DASHBOARD
+  /dashboard/student:
+    get:
+      operationId: getStudentDashboard
+      tags: [dashboard]
+      summary: Student dashboard summary
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentDashboard"
+
+  /dashboard/client:
+    get:
+      operationId: getClientDashboard
+      tags: [dashboard]
+      summary: Client (company/individual) dashboard summary
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientDashboard"
+
+  /dashboard/stats:
+    get:
+      operationId: getPlatformStats
+      tags: [dashboard]
+      summary: Platform-wide stats for homepage
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +718,473 @@ components:
       required:
         - status
 
+    # AUTH
+    RegisterInput:
+      type: object
+      required: [email, password, name, role]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        name:
+          type: string
+        role:
+          type: string
+          enum: [student, company, individual]
+        university:
+          type: ["string", "null"]
+        companyName:
+          type: ["string", "null"]
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+
+    # USER
+    User:
+      type: object
+      required: [id, email, name, role, createdAt]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [student, company, individual]
+        avatarUrl:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        university:
+          type: ["string", "null"]
+        skills:
+          type: array
+          items:
+            type: string
+        averageRating:
+          type: ["number", "null"]
+        totalReviews:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    UserProfile:
+      type: object
+      required: [id, name, role, createdAt]
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [student, company, individual]
+        avatarUrl:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        university:
+          type: ["string", "null"]
+        skills:
+          type: array
+          items:
+            type: string
+        portfolioUrl:
+          type: ["string", "null"]
+        cvUrl:
+          type: ["string", "null"]
+        averageRating:
+          type: ["number", "null"]
+        totalReviews:
+          type: integer
+        completedMissions:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    UserList:
+      type: object
+      required: [users, total]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserProfile"
+        total:
+          type: integer
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        bio:
+          type: string
+        university:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        avatarUrl:
+          type: string
+        portfolioUrl:
+          type: string
+        cvUrl:
+          type: string
+
+    # SERVICE
+    Service:
+      type: object
+      required: [id, title, description, price, deliveryDays, category, studentId, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        deliveryDays:
+          type: integer
+        category:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        totalOrders:
+          type: integer
+        averageRating:
+          type: ["number", "null"]
+        studentId:
+          type: integer
+        student:
+          $ref: "#/components/schemas/User"
+        createdAt:
+          type: string
+          format: date-time
+
+    ServiceList:
+      type: object
+      required: [services, total]
+      properties:
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/Service"
+        total:
+          type: integer
+
+    ServiceInput:
+      type: object
+      required: [title, description, price, deliveryDays, category]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        deliveryDays:
+          type: integer
+        category:
+          type: string
+        imageUrl:
+          type: string
+
+    ServiceUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        deliveryDays:
+          type: integer
+        category:
+          type: string
+        imageUrl:
+          type: string
+
+    # MISSION
+    Mission:
+      type: object
+      required: [id, title, description, budget, deadline, status, clientId, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        budget:
+          type: number
+        deadline:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [open, in_progress, completed, cancelled]
+        skills:
+          type: array
+          items:
+            type: string
+        clientId:
+          type: integer
+        client:
+          $ref: "#/components/schemas/User"
+        applicationCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    MissionList:
+      type: object
+      required: [missions, total]
+      properties:
+        missions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mission"
+        total:
+          type: integer
+
+    MissionInput:
+      type: object
+      required: [title, description, budget, deadline]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        budget:
+          type: number
+        deadline:
+          type: string
+          format: date
+        skills:
+          type: array
+          items:
+            type: string
+
+    MissionUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        budget:
+          type: number
+        deadline:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [open, in_progress, completed, cancelled]
+        skills:
+          type: array
+          items:
+            type: string
+
+    # APPLICATION
+    Application:
+      type: object
+      required: [id, missionId, studentId, status, createdAt]
+      properties:
+        id:
+          type: integer
+        missionId:
+          type: integer
+        studentId:
+          type: integer
+        student:
+          $ref: "#/components/schemas/User"
+        coverLetter:
+          type: ["string", "null"]
+        proposedBudget:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [pending, accepted, rejected]
+        createdAt:
+          type: string
+          format: date-time
+
+    ApplicationInput:
+      type: object
+      properties:
+        coverLetter:
+          type: string
+        proposedBudget:
+          type: number
+
+    ApplicationUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [accepted, rejected]
+
+    # MESSAGES
+    Conversation:
+      type: object
+      required: [id, participants, createdAt]
+      properties:
+        id:
+          type: integer
+        participants:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        lastMessage:
+          type: ["string", "null"]
+        lastMessageAt:
+          type: ["string", "null"]
+          format: date-time
+        unreadCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ConversationInput:
+      type: object
+      required: [participantId]
+      properties:
+        participantId:
+          type: integer
+
+    Message:
+      type: object
+      required: [id, conversationId, senderId, content, createdAt]
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        senderId:
+          type: integer
+        sender:
+          $ref: "#/components/schemas/User"
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    MessageInput:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+
+    # REVIEW
+    Review:
+      type: object
+      required: [id, reviewerId, revieweeId, rating, createdAt]
+      properties:
+        id:
+          type: integer
+        reviewerId:
+          type: integer
+        reviewer:
+          $ref: "#/components/schemas/User"
+        revieweeId:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    ReviewInput:
+      type: object
+      required: [revieweeId, rating]
+      properties:
+        revieweeId:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+
+    # DASHBOARD
+    StudentDashboard:
+      type: object
+      required: [totalEarnings, activeServices, activeApplications, pendingApplications, completedMissions, unreadMessages]
+      properties:
+        totalEarnings:
+          type: number
+        activeServices:
+          type: integer
+        activeApplications:
+          type: integer
+        pendingApplications:
+          type: integer
+        completedMissions:
+          type: integer
+        unreadMessages:
+          type: integer
+
+    ClientDashboard:
+      type: object
+      required: [activeMissions, totalApplicationsReceived, completedMissions, totalSpent, unreadMessages]
+      properties:
+        activeMissions:
+          type: integer
+        totalApplicationsReceived:
+          type: integer
+        completedMissions:
+          type: integer
+        totalSpent:
+          type: number
+        unreadMessages:
+          type: integer
+
+    PlatformStats:
+      type: object
+      required: [totalStudents, totalMissions, totalServices, totalCompanies]
+      properties:
+        totalStudents:
+          type: integer
+        totalMissions:
+          type: integer
+        totalServices:
+          type: integer
+        totalCompanies:
+          type: integer
